@@ -1,28 +1,139 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="root">
+    <div class="todo-container">
+      <div class="todo-wrap">
+        <MyHeader @addToDo="addToDo"/>
+        <MyList :todo="todos"/>
+        <MyFooter :todos="todos" @checkAllToDo="checkAllToDo" @clearAllToDo="clearAllToDo"/>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import pubsub from 'pubsub-js'
+import MyHeader from "@/components/MyHeader";
+import MyList from "@/components/MyList";
+import MyFooter from "@/components/MyFooter";
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    MyHeader,
+    MyList,
+    MyFooter
+  },
+  data() {
+    return {
+      todos: JSON.parse(localStorage.getItem('todos')) || []
+    }
+  },
+  methods: {
+    addToDo(todoObj) {
+      this.todos.unshift(todoObj)
+    },
+    checkToDo(id) {
+      this.todos.forEach((todo) => {
+        if (todo.id === id) {
+          todo.done = !todo.done
+        }
+      })
+    },
+    deleteToDo(_, id) {
+      this.todos = this.todos.filter(todo => {
+        return todo.id !== id
+      })
+    },
+    checkAllToDo(done) {
+      this.todos.forEach((todo) => {
+        todo.done = done
+      })
+    },
+    clearAllToDo() {
+      this.todos = this.todos.filter(todo => {
+        return !todo.done
+      })
+    },
+    updateToDo(id, title) {
+      this.todos.forEach((todo) => {
+        if (todo.id === id) todo.title = title
+      })
+    }
+  },
+  watch: {
+    todos: {
+      deep: true,
+      handler(value) {
+        localStorage.setItem('todos', JSON.stringify(value))
+      }
+    }
+  },
+  mounted() {
+    this.$bus.$on('checkToDo', this.checkToDo)
+    this.$bus.$on('updateToDo', this.updateToDo)
+
+    // this.$bus.$on('deleteToDo',this.deleteToDo)
+    this.pubId = pubsub.subscribe("deleteToDo", this.deleteToDo)
+  },
+  beforeDestroy() {
+    this.$bus.$off('checkToDo')
+    // this.$bus.$off('deleteToDo')
+    this.$bus.$off('updateToDo')
+
+    pubsub.unsubscribe('pubId')
   }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/*base*/
+body {
+  background: #fff;
+}
+
+.btn {
+  display: inline-block;
+  padding: 4px 12px;
+  margin-bottom: 0;
+  font-size: 14px;
+  line-height: 20px;
   text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  vertical-align: middle;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.btn-danger {
+  color: #fff;
+  background-color: #da4f49;
+  border: 1px solid #bd362f;
+}
+
+.btn-edit {
+  color: #fff;
+  background-color: skyblue;
+  border: 1px solid #6ba1b6;
+  margin-right: 5px;
+}
+
+.btn-danger:hover {
+  color: #fff;
+  background-color: #bd362f;
+}
+
+.btn:focus {
+  outline: none;
+}
+
+.todo-container {
+  width: 600px;
+  margin: 0 auto;
+}
+
+.todo-container .todo-wrap {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
 }
 </style>
